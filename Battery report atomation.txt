@@ -1,0 +1,111 @@
+[
+    {
+        "id": "ecaeb7ea7a6cd579",
+        "type": "group",
+        "z": "battery_tab",
+        "name": "",
+        "style": {
+            "stroke": "#ffff00",
+            "label": true
+        },
+        "nodes": [
+            "exec_powercfg",
+            "file_read",
+            "92ba0fc352ac6eb1",
+            "2d52330e3f9831e2",
+            "aa4736ef08ef2e48"
+        ],
+        "x": 114,
+        "y": 59,
+        "w": 772,
+        "h": 442
+    },
+    {
+        "id": "exec_powercfg",
+        "type": "exec",
+        "z": "battery_tab",
+        "g": "ecaeb7ea7a6cd579",
+        "command": "powercfg /batteryreport /output C:\\\\mrtechbangalore\\\\battery.html",
+        "addpay": false,
+        "append": "",
+        "timer": "",
+        "winHide": false,
+        "name": "",
+        "x": 390,
+        "y": 220,
+        "wires": [
+            [
+                "file_read"
+            ],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "file_read",
+        "type": "file in",
+        "z": "battery_tab",
+        "g": "ecaeb7ea7a6cd579",
+        "name": "Read Battery Report",
+        "filename": "C:\\\\mrtechbangalore\\\\battery.html",
+        "filenameType": "str",
+        "format": "utf8",
+        "allProps": false,
+        "x": 660,
+        "y": 340,
+        "wires": [
+            [
+                "92ba0fc352ac6eb1",
+                "aa4736ef08ef2e48"
+            ]
+        ]
+    },
+    {
+        "id": "92ba0fc352ac6eb1",
+        "type": "debug",
+        "z": "battery_tab",
+        "g": "ecaeb7ea7a6cd579",
+        "name": "debug 11",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 740,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "2d52330e3f9831e2",
+        "type": "http in",
+        "z": "battery_tab",
+        "g": "ecaeb7ea7a6cd579",
+        "name": "",
+        "url": "/battery",
+        "method": "get",
+        "upload": false,
+        "skipBodyParsing": false,
+        "swaggerDoc": "",
+        "x": 210,
+        "y": 120,
+        "wires": [
+            [
+                "exec_powercfg"
+            ]
+        ]
+    },
+    {
+        "id": "aa4736ef08ef2e48",
+        "type": "http response",
+        "z": "battery_tab",
+        "g": "ecaeb7ea7a6cd579",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 810,
+        "y": 460,
+        "wires": []
+    }
+]
