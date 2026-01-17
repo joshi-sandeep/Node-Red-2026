@@ -1,0 +1,111 @@
+[
+    {
+        "id": "72dde0cbda7ed575",
+        "type": "group",
+        "z": "042910494d7055ed",
+        "style": {
+            "stroke": "#999999",
+            "stroke-opacity": "1",
+            "fill": "none",
+            "fill-opacity": "1",
+            "label": true,
+            "label-position": "nw",
+            "color": "#a4a4a4"
+        },
+        "nodes": [
+            "ad43824ed1033cb7",
+            "598d04061eee9770",
+            "faf1218a41b93162",
+            "7e7a07527e5e1962",
+            "382bbbfaf0325617"
+        ],
+        "x": 44,
+        "y": 119,
+        "w": 872,
+        "h": 169.5
+    },
+    {
+        "id": "ad43824ed1033cb7",
+        "type": "http in",
+        "z": "042910494d7055ed",
+        "g": "72dde0cbda7ed575",
+        "name": "GET /health",
+        "url": "/health",
+        "method": "get",
+        "upload": false,
+        "skipBodyParsing": false,
+        "x": 140,
+        "y": 240,
+        "wires": [
+            [
+                "598d04061eee9770"
+            ]
+        ]
+    },
+    {
+        "id": "598d04061eee9770",
+        "type": "exec",
+        "z": "042910494d7055ed",
+        "g": "72dde0cbda7ed575",
+        "command": "powershell -NoProfile -Command \"$cpu = (Get-CimInstance Win32_Processor | Measure-Object LoadPercentage -Average).Average; $os = Get-CimInstance Win32_OperatingSystem; $totalMem = [math]::Round($os.TotalVisibleMemorySize/1MB,2); $freeMem = [math]::Round($os.FreePhysicalMemory/1MB,2); $usedMem = $totalMem - $freeMem; $disk = Get-CimInstance Win32_LogicalDisk -Filter \\\"DriveType=3\\\" | Select DeviceID,Size,FreeSpace; Write-Output ('CPU=' + $cpu); Write-Output ('TOTAL_RAM=' + $totalMem); Write-Output ('USED_RAM=' + $usedMem); Write-Output ('FREE_RAM=' + $freeMem); $disk | ForEach-Object { Write-Output ('DISK=' + $_.DeviceID + ',' + [math]::Round($_.Size/1GB,2) + ',' + [math]::Round($_.FreeSpace/1GB,2)) }\"",
+        "addpay": false,
+        "append": "",
+        "useSpawn": "false",
+        "timer": "",
+        "winHide": true,
+        "name": "Get CPU RAM Disk",
+        "x": 380,
+        "y": 240,
+        "wires": [
+            [
+                "faf1218a41b93162"
+            ],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "faf1218a41b93162",
+        "type": "function",
+        "z": "042910494d7055ed",
+        "g": "72dde0cbda7ed575",
+        "name": "Format HTML",
+        "func": "// const lines = msg.payload.split(\"\\n\").filter(l => l.trim());\n\n// let cpu = \"\";\n// let totalRam = \"\";\n// let usedRam = \"\";\n// let freeRam = \"\";\n// let diskRows = \"\";\n\n// lines.forEach(line => {\n//     if (line.startsWith(\"CPU=\")) cpu = line.split(\"=\")[1];\n//     if (line.startsWith(\"TOTAL_RAM=\")) totalRam = line.split(\"=\")[1];\n//     if (line.startsWith(\"USED_RAM=\")) usedRam = line.split(\"=\")[1];\n//     if (line.startsWith(\"FREE_RAM=\")) freeRam = line.split(\"=\")[1];\n//     if (line.startsWith(\"DISK=\")) {\n//         const d = line.split(\"=\")[1].split(\",\");\n//         diskRows += `<tr><td>${d[0]}</td><td>${d[1]} GB</td><td>${d[2]} GB</td></tr>`;\n//     }\n// });\n\n// msg.payload = `\n// <!DOCTYPE html>\n// <html>\n// <head>\n//   <title>System Health Report</title>\n//   <style>\n//     body { font-family: Arial; background: #f4f6f8; padding: 30px; }\n//     .card { background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }\n//     h2 { margin-top: 0; }\n//     table { width: 100%; border-collapse: collapse; }\n//     th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }\n//     th { background: #eee; }\n//   </style>\n// </head>\n// <body>\n\n//   <div class=\"card\">\n//     <h2>CPU</h2>\n//     <p>Current Load: <strong>${cpu}%</strong></p>\n//   </div>\n\n//   <div class=\"card\">\n//     <h2>Memory (RAM)</h2>\n//     <p>Total: ${totalRam} GB</p>\n//     <p>Used: ${usedRam} GB</p>\n//     <p>Free: ${freeRam} GB</p>\n//   </div>\n\n//   <div class=\"card\">\n//     <h2>Disk Usage</h2>\n//     <table>\n//       <tr><th>Drive</th><th>Total Size</th><th>Free Space</th></tr>\n//       ${diskRows}\n//     </table>\n//   </div>\n\n// </body>\n// </html>`;\n\n// return msg;\n\nconst lines = msg.payload.split(\"\\n\").filter(l => l.trim());\n\nlet cpu = \"\";\nlet totalRam = 0;\nlet usedRam = 0;\nlet freeRam = 0;\nlet diskRows = \"\";\nlet ramWarning = \"\";\n\nlines.forEach(line => {\n  if (line.startsWith(\"CPU=\")) cpu = line.split(\"=\")[1];\n  if (line.startsWith(\"TOTAL_RAM=\")) totalRam = parseFloat(line.split(\"=\")[1]);\n  if (line.startsWith(\"USED_RAM=\")) usedRam = parseFloat(line.split(\"=\")[1]);\n  if (line.startsWith(\"FREE_RAM=\")) freeRam = parseFloat(line.split(\"=\")[1]);\n  if (line.startsWith(\"DISK=\")) {\n    const d = line.split(\"=\")[1].split(\",\");\n    diskRows += `<tr><td>${d[0]}</td><td>${d[1]} GB</td><td>${d[2]} GB</td></tr>`;\n  }\n});\n\n// 🔔 THRESHOLD LOGIC (THIS IS THE KEY PART)\nconst RAM_THRESHOLD = 12; // GB\n\nif (usedRam > RAM_THRESHOLD) {\n  ramWarning = `\n      <div class=\"alert\">\n        ⚠️ <strong>High Memory Usage!</strong><br>\n        Close some applications to free up memory.\n      </div>\n    `;\n}\n\nmsg.payload = `\n<!DOCTYPE html>\n<html>\n<head>\n  <title>System Health Report</title>\n  <style>\n    body { font-family: Arial; background: #f4f6f8; padding: 30px; }\n    .card { background: #fff; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }\n    h2 { margin-top: 0; }\n    table { width: 100%; border-collapse: collapse; }\n    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }\n    th { background: #eee; }\n    .alert {\n      background: #fff3cd;\n      border: 1px solid #ffecb5;\n      color: #664d03;\n      padding: 15px;\n      border-radius: 6px;\n      margin-bottom: 20px;\n      font-weight: bold;\n    }\n  </style>\n</head>\n<body>\n\n  ${ramWarning}\n\n  <div class=\"card\">\n    <h2>CPU</h2>\n    <p>Current Load: <strong>${cpu}%</strong></p>\n  </div>\n\n  <div class=\"card\">\n    <h2>Memory (RAM)</h2>\n    <p>Total: ${totalRam} GB</p>\n    <p>Used: ${usedRam} GB</p>\n    <p>Free: ${freeRam} GB</p>\n  </div>\n\n  <div class=\"card\">\n    <h2>Disk Usage</h2>\n    <table>\n      <tr><th>Drive</th><th>Total Size</th><th>Free Space</th></tr>\n      ${diskRows}\n    </table>\n  </div>\n\n</body>\n</html>`;\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 620,
+        "y": 240,
+        "wires": [
+            [
+                "7e7a07527e5e1962"
+            ]
+        ]
+    },
+    {
+        "id": "7e7a07527e5e1962",
+        "type": "http response",
+        "z": "042910494d7055ed",
+        "g": "72dde0cbda7ed575",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 840,
+        "y": 240,
+        "wires": []
+    },
+    {
+        "id": "382bbbfaf0325617",
+        "type": "comment",
+        "z": "042910494d7055ed",
+        "g": "72dde0cbda7ed575",
+        "name": "HEALTH MONITORING OF YOUR SYSTEM",
+        "info": "",
+        "x": 470,
+        "y": 160,
+        "wires": []
+    }
+]

@@ -1,0 +1,192 @@
+[
+    {
+        "id": "57e3993b7ff92803",
+        "type": "group",
+        "z": "a456db5d8cb2be72",
+        "name": "",
+        "style": {
+            "fill": "#ffefbf",
+            "label": true
+        },
+        "nodes": [
+            "197e43bab4df2c96",
+            "6dce0d0c0be35dee",
+            "f2cae150da0dd762",
+            "b49b357b3d100872"
+        ],
+        "x": 134,
+        "y": 179,
+        "w": 732,
+        "h": 162
+    },
+    {
+        "id": "197e43bab4df2c96",
+        "type": "inject",
+        "z": "a456db5d8cb2be72",
+        "g": "57e3993b7ff92803",
+        "name": "Every 10 sec",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "10",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "10",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 260,
+        "y": 300,
+        "wires": [
+            [
+                "6dce0d0c0be35dee"
+            ]
+        ]
+    },
+    {
+        "id": "6dce0d0c0be35dee",
+        "type": "function",
+        "z": "a456db5d8cb2be72",
+        "g": "57e3993b7ff92803",
+        "name": "Generate Fleet Data",
+        "func": "// ===== REAL-TIME DELIVERY FLEET =====\nconst title = \"Real-Time Delivery Fleet Monitor\";\n\nconst VEHICLE_COUNT = 8;\n\nconst BOUNDS = {\n    latMin: 12.90,\n    latMax: 13.10,\n    lonMin: 77.50,\n    lonMax: 77.75\n};\n\nfunction rand(min, max) {\n    return Math.random() * (max - min) + min;\n}\n\nfunction pickStatus() {\n    const statuses = [\"Idle\", \"Delivering\", \"Delayed\"];\n    return statuses[Math.floor(Math.random() * statuses.length)];\n}\n\nlet fleet = context.get(\"fleet\");\n\nif (!fleet) {\n    fleet = [];\n    for (let i = 0; i < VEHICLE_COUNT; i++) {\n        fleet.push({\n            id: \"V\" + (i + 1),\n            x: rand(BOUNDS.lonMin, BOUNDS.lonMax),\n            y: rand(BOUNDS.latMin, BOUNDS.latMax),\n            load: rand(4, 14),\n            status: pickStatus()\n        });\n    }\n}\n\nfleet.forEach(v => {\n    v.x += rand(-0.002, 0.002);\n    v.y += rand(-0.002, 0.002);\n\n    v.load = Math.max(4, Math.min(18, v.load + rand(-1, 1)));\n\n    if (Math.random() < 0.15) {\n        v.status = pickStatus();\n    }\n});\n\ncontext.set(\"fleet\", fleet);\n\nfunction getColor(status) {\n    if (status === \"Idle\") return \"rgba(54,162,235,0.7)\";\n    if (status === \"Delivering\") return \"rgba(75,192,192,0.7)\";\n    return \"rgba(255,99,132,0.7)\";\n}\n\nconst datasets = fleet.map(v => ({\n    label: `${v.id} (${v.status})`,\n    backgroundColor: getColor(v.status),\n    borderColor: \"#000\",\n    data: [{ x: v.x, y: v.y, r: v.load }]\n}));\n\nmsg.payload = {\n    title,\n    datasets\n};\n\nreturn msg;",
+        "outputs": 1,
+        "x": 480,
+        "y": 300,
+        "wires": [
+            [
+                "f2cae150da0dd762"
+            ]
+        ]
+    },
+    {
+        "id": "f2cae150da0dd762",
+        "type": "ui-template",
+        "z": "a456db5d8cb2be72",
+        "g": "57e3993b7ff92803",
+        "group": "group_bubble",
+        "page": "",
+        "ui": "",
+        "name": "Fleet Bubble Chart",
+        "order": 2,
+        "width": "12",
+        "height": "10",
+        "format": "<script src=\"https://cdn.jsdelivr.net/npm/chart.js\"></script>\n\n<template>\n  <div style=\"height:100%;width:100%\">\n    <canvas ref=\"chart\"></canvas>\n  </div>\n</template>\n\n<script>\nexport default {\n  data() {\n    return { chart: null }\n  },\n  watch: {\n    msg: {\n      deep: true,\n      handler(msg) {\n        if (!msg?.payload) return\n        this.renderChart(msg.payload)\n      }\n    }\n  },\n  methods: {\n    renderChart(payload) {\n      if (!window.Chart) return\n\n      const ctx = this.$refs.chart.getContext(\"2d\")\n\n      if (this.chart) this.chart.destroy()\n\n      this.chart = new Chart(ctx, {\n        type: \"bubble\",\n        data: {\n          datasets: payload.datasets\n        },\n        options: {\n          responsive: true,\n          maintainAspectRatio: false,\n          animation: {\n            duration: 800\n          },\n          plugins: {\n            title: { display: true, text: payload.title },\n            legend: { display: true }\n          },\n          scales: {\n            x: {\n              title: { display: true, text: \"Longitude\" }\n            },\n            y: {\n              title: { display: true, text: \"Latitude\" }\n            }\n          }\n        }\n      })\n    }\n  }\n}\n</script>\n\n<style>\ncanvas { width:100% !important; height:100% !important; }\n</style>",
+        "storeOutMessages": true,
+        "passthru": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "className": "",
+        "x": 750,
+        "y": 300,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "b49b357b3d100872",
+        "type": "comment",
+        "z": "a456db5d8cb2be72",
+        "g": "57e3993b7ff92803",
+        "name": "Build a Live Delivery Tracker in Node-RED",
+        "info": "",
+        "x": 500,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "group_bubble",
+        "type": "ui-group",
+        "name": "Bubble Chart",
+        "page": "page_bubble",
+        "width": "12",
+        "height": "1",
+        "order": 1,
+        "visible": true,
+        "disabled": false
+    },
+    {
+        "id": "page_bubble",
+        "type": "ui-page",
+        "name": "Bubble Demo",
+        "ui": "447ceaa35aeb1d96",
+        "path": "/bubble-demo",
+        "icon": "dashboard",
+        "layout": "grid",
+        "theme": "0d92c765bfad87e6",
+        "breakpoints": [
+            {
+                "name": "Default",
+                "px": "0",
+                "cols": "3"
+            },
+            {
+                "name": "Tablet",
+                "px": "576",
+                "cols": "6"
+            },
+            {
+                "name": "Small Desktop",
+                "px": "768",
+                "cols": "9"
+            },
+            {
+                "name": "Desktop",
+                "px": "1024",
+                "cols": "12"
+            }
+        ],
+        "order": 1,
+        "className": "",
+        "visible": "true",
+        "disabled": "false"
+    },
+    {
+        "id": "447ceaa35aeb1d96",
+        "type": "ui-base",
+        "name": "sun",
+        "path": "/dashboard",
+        "appIcon": "",
+        "includeClientData": true,
+        "acceptsClientConfig": [
+            "ui-notification",
+            "ui-control"
+        ],
+        "showPathInSidebar": false,
+        "headerContent": "page",
+        "navigationStyle": "default",
+        "titleBarStyle": "default",
+        "showReconnectNotification": true,
+        "notificationDisplayTime": 1,
+        "showDisconnectNotification": true,
+        "allowInstall": true
+    },
+    {
+        "id": "0d92c765bfad87e6",
+        "type": "ui-theme",
+        "name": "Basic Blue Theme",
+        "colors": {
+            "surface": "#4d58ff",
+            "primary": "#0094ce",
+            "bgPage": "#eeeeee",
+            "groupBg": "#ffffff",
+            "groupOutline": "#cccccc"
+        },
+        "sizes": {
+            "pagePadding": "12px",
+            "groupGap": "12px",
+            "groupBorderRadius": "4px",
+            "widgetGap": "12px"
+        }
+    },
+    {
+        "id": "bac1c90ced6c1a3e",
+        "type": "global-config",
+        "env": [],
+        "modules": {
+            "@flowfuse/node-red-dashboard": "1.30.2"
+        }
+    }
+]
